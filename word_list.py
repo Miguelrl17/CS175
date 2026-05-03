@@ -4,7 +4,7 @@ from pathlib import Path
 
 WORDS = Path(r"valid-wordle-words.txt")
 
-def load_word_list(filepath | None = None) :
+def load_word_list(filepath) :
     words = []
     if filepath and Path(filepath).exists():
         with open(filepath, "r") as f:
