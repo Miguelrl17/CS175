@@ -6,9 +6,9 @@ from typing import Optional
 
 
 class TileColor(str, Enum):
-    GREEN  = "G"
+    GREEN = "G"
     YELLOW = "Y"
-    GRAY   = "X"
+    GRAY = "X"
 
 
 @dataclass
@@ -20,17 +20,18 @@ class GuessFeedback:
         return all(c == TileColor.GREEN for c in self.colors)
 
     def __str__(self) -> str:
-        color_map = {TileColor.GREEN: "🟩", TileColor.YELLOW: "🟨", TileColor.GRAY: "⬜"}
+        color_map = {TileColor.GREEN: "🟩",
+                     TileColor.YELLOW: "🟨", TileColor.GRAY: "⬜"}
         tiles = "".join(color_map[c] for c in self.colors)
         return f"{self.guess}  {tiles}"
 
 
 @dataclass
 class GameState:
-    green_letters:  dict[int, str]       = field(default_factory=dict)
-    yellow_letters: dict[str, set[int]]  = field(default_factory=dict)
-    gray_letters:   set[str]             = field(default_factory=set)
-    history:        list[GuessFeedback]  = field(default_factory=list)
+    green_letters:  dict[int, str] = field(default_factory=dict)
+    yellow_letters: dict[str, set[int]] = field(default_factory=dict)
+    gray_letters:   set[str] = field(default_factory=set)
+    history:        list[GuessFeedback] = field(default_factory=list)
 
     def update(self, feedback: GuessFeedback) -> None:
         self.history.append(feedback)
@@ -68,21 +69,21 @@ class GameState:
 
 
 def compute_feedback(guess: str, target: str) -> GuessFeedback:
-    guess  = guess.upper()
+    guess = guess.upper()
     target = target.upper()
     assert len(guess) == len(target) == 5
 
     colors: list[Optional[TileColor]] = [None] * 5
-    remaining: list[Optional[str]]    = list(target)
+    remaining: list[Optional[str]] = list(target)
 
     for i in range(5):
         if guess[i] == target[i]:
-            colors[i]    = TileColor.GREEN
-            remaining[i] = None 
+            colors[i] = TileColor.GREEN
+            remaining[i] = None
 
     for i in range(5):
         if colors[i] is not None:
-            continue 
+            continue
         letter = guess[i]
         if letter in remaining:
             colors[i] = TileColor.YELLOW
