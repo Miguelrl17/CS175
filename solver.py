@@ -7,7 +7,7 @@ from pruner import prune
 
 OPENER: str = "CRANE"
 
-VOCAB_THRESHOLD: int = 8
+VOCAB_THRESHOLD: int = 20
 
 
 @lru_cache(maxsize=None)
@@ -30,10 +30,12 @@ class WordleSolver:
     def __init__(
         self,
         word_list: list[str],
+        answers: list[str],
         hard_mode: bool = False,
         vocab_threshold: int = VOCAB_THRESHOLD,
     ) -> None:
-        self.word_list: list[str] = word_list
+        self.word_list: list[str] = word_list  # full 10k guess vocabulary
+        self.answers: list[str] = answers  # 2k possible answers
         self.hard_mode: bool = hard_mode
         self.vocab_threshold: int = vocab_threshold
 
@@ -43,7 +45,7 @@ class WordleSolver:
         self._turn: int = 0
 
     def reset(self) -> None:
-        self._candidates = list(self.word_list)
+        self._candidates = list(self.answers)  # candidates are always from answer list
         self._candidate_set = set(self._candidates)
         self._state = GameState()
         self._turn = 0
@@ -76,8 +78,8 @@ class WordleSolver:
         if self.hard_mode:
             return self._candidates
         if len(self._candidates) <= self.vocab_threshold:
-            return self.word_list
-        return self._candidates
+            return self.word_list  # search full 10k for best discriminator
+        return self.word_list  # always use full vocabulary now
 
     def _best_guess(self, guess_pool: list[str]) -> str:
         best_word: str = guess_pool[0]
@@ -85,6 +87,7 @@ class WordleSolver:
 
         for word in guess_pool:
             h = _entropy(word, self._candidates)
+            # tiebreak: prefer words that are still valid answers
             score = (h, int(word in self._candidate_set))
             if score > best_score:
                 best_score = score
@@ -93,11 +96,13 @@ class WordleSolver:
         return best_word
 
 
-def find_best_opener(word_list: list[str]) -> tuple[str, float]:
-    print(f"Computing opener entropy over {len(word_list)} words ...")
+def find_best_opener(word_list: list[str], answers: list[str]) -> tuple[str, float]:
+    print(
+        f"Computing opener entropy over {len(word_list)} guesses × {len(answers)} answers ..."
+    )
     best_word, best_h = word_list[0], -1.0
     for i, word in enumerate(word_list):
-        h = _entropy(word, word_list)
+        h = _entropy(word, answers)
         if h > best_h:
             best_h, best_word = h, word
         if (i + 1) % 500 == 0:
@@ -109,11 +114,12 @@ def find_best_opener(word_list: list[str]) -> tuple[str, float]:
 
 if __name__ == "__main__":
     import sys
-    from word_list import load_word_list, WORDS
+    from word_list import load_word_list, load_answer_list, WORDS, ANSWERS
 
     if "--find-opener" in sys.argv:
         wl = load_word_list(WORDS)
-        word, h = find_best_opener(wl)
+        ans = load_answer_list(ANSWERS)
+        word, h = find_best_opener(wl, ans)
         print(f"\nBest opener: {word}  ({h:.4f} bits)")
     else:
         print("Usage: python solver.py --find-opener")

@@ -4,7 +4,7 @@ CS 175 Team 69 (Cody He, Miguel Ruiz Licea, Kailee Tea Kaocharoen)
 # solve in normal mode
     python main.py target --target crane
 
-# solve in hard mode (guesses cannot use absent letters)
+# solve in hard mode
     python main.py --hard target --target crane
 
 # full benchmark, show chart
@@ -16,10 +16,10 @@ CS 175 Team 69 (Cody He, Miguel Ruiz Licea, Kailee Tea Kaocharoen)
 # benchmark random sample of 200 words
     python main.py benchmark --sample 200
 
-# interactive hint mode (enter feedback, solver suggests guesses)
+# interactive hint mode
     python main.py interactive
 
-# calculate true optimal opener for the loaded word list (slow)
+# calculate true optimal opener (slow)
     python main.py find-opener
 """
 
@@ -28,7 +28,7 @@ import random
 import sys
 from pathlib import Path
 
-from word_list import load_word_list, WORDS
+from word_list import load_word_list, load_answer_list, WORDS, ANSWERS
 from solver import WordleSolver, OPENER, find_best_opener
 from simulator import WordleGame, run_benchmark, MAX_GUESSES
 from feedback import GuessFeedback, TileColor
@@ -36,7 +36,6 @@ from feedback import GuessFeedback, TileColor
 
 def _print_stats(stats: dict) -> None:
     dist = stats["distribution"]
-    max_count = max(dist.values(), default=1)
 
     print("\n╔══════════════════════════════════╗")
     print("║       Benchmark Results          ║")
@@ -97,14 +96,22 @@ def _plot_distribution(stats: dict, opener: str) -> None:
     plt.show()
 
 
-def cmd_target(args: argparse.Namespace, word_list: list[str]) -> None:
+def _make_solver(
+    args: argparse.Namespace, word_list: list[str], answers: list[str]
+) -> WordleSolver:
+    return WordleSolver(word_list, answers, hard_mode=args.hard)
+
+
+def cmd_target(
+    args: argparse.Namespace, word_list: list[str], answers: list[str]
+) -> None:
     target = args.target.upper()
-    if target not in set(word_list):
-        print(f"[!] '{target}' is not in the word list.")
+    if target not in set(answers):
+        print(f"[!] '{target}' is not in the answer list.")
         sys.exit(1)
 
-    solver = WordleSolver(word_list, hard_mode=args.hard)
-    game = WordleGame(word_list, target)
+    solver = _make_solver(args, word_list, answers)
+    game = WordleGame(answers, target)
 
     print(f"\nTarget : {target}")
     print(f"Mode   : {'hard' if args.hard else 'normal'}\n")
@@ -117,18 +124,21 @@ def cmd_target(args: argparse.Namespace, word_list: list[str]) -> None:
         print(f"Failed to solve '{target}' within {MAX_GUESSES} guesses.")
 
 
-def cmd_benchmark(args: argparse.Namespace, word_list: list[str]) -> None:
+def cmd_benchmark(
+    args: argparse.Namespace, word_list: list[str], answers: list[str]
+) -> None:
     sample = None
-    if args.sample and args.sample < len(word_list):
-        sample = random.sample(word_list, args.sample)
-        print(f"Sampling {args.sample} words from the full list of {len(word_list)}.")
+    if args.sample and args.sample < len(answers):
+        sample = random.sample(answers, args.sample)
+        print(f"Sampling {args.sample} words from the answer list of {len(answers)}.")
 
-    print(f"Opener : {OPENER}")
-    print(f"Mode   : {'hard' if args.hard else 'normal'}")
-    print(f"Words  : {len(sample) if sample else len(word_list)}\n")
+    print(f"Opener      : {OPENER}")
+    print(f"Mode        : {'hard' if args.hard else 'normal'}")
+    print(f"Guess vocab : {len(word_list)}")
+    print(f"Answers     : {len(sample) if sample else len(answers)}\n")
 
-    solver = WordleSolver(word_list, hard_mode=args.hard)
-    stats = run_benchmark(word_list, solver, show_progress=True, sample=sample)
+    solver = _make_solver(args, word_list, answers)
+    stats = run_benchmark(answers, solver, show_progress=True, sample=sample)
 
     _print_stats(stats)
 
@@ -136,8 +146,10 @@ def cmd_benchmark(args: argparse.Namespace, word_list: list[str]) -> None:
         _plot_distribution(stats, OPENER)
 
 
-def cmd_interactive(args: argparse.Namespace, word_list: list[str]) -> None:
-    solver = WordleSolver(word_list, hard_mode=args.hard)
+def cmd_interactive(
+    args: argparse.Namespace, word_list: list[str], answers: list[str]
+) -> None:
+    solver = _make_solver(args, word_list, answers)
     solver.reset()
 
     color_map = {"G": TileColor.GREEN, "Y": TileColor.YELLOW, "X": TileColor.GRAY}
@@ -161,10 +173,7 @@ def cmd_interactive(args: argparse.Namespace, word_list: list[str]) -> None:
                 break
             print("[!] Enter exactly 5 characters from G / Y / X.")
 
-        fb = GuessFeedback(
-            guess=guess,
-            colors=[color_map[c] for c in raw],
-        )
+        fb = GuessFeedback(guess=guess, colors=[color_map[c] for c in raw])
         solver.observe(fb)
 
         if fb.is_win():
@@ -176,10 +185,13 @@ def cmd_interactive(args: argparse.Namespace, word_list: list[str]) -> None:
     print(f"\nCould not solve within {MAX_GUESSES} guesses.")
 
 
-def cmd_find_opener(args: argparse.Namespace, word_list: list[str]) -> None:
-    print(f"\nWord list size: {len(word_list)}")
+def cmd_find_opener(
+    args: argparse.Namespace, word_list: list[str], answers: list[str]
+) -> None:
+    print(f"\nGuess vocabulary : {len(word_list)} words")
+    print(f"Answer list      : {len(answers)} words")
     print("Warning: this may take several minutes...\n")
-    word, h = find_best_opener(word_list)
+    word, h = find_best_opener(word_list, answers)
     print(f"\nBest opener: {word}  ({h:.4f} bits of entropy)")
     print(f"Update OPENER in solver.py to '{word}' to use it.")
 
@@ -192,7 +204,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--words",
         default=str(WORDS),
         metavar="FILE",
-        help="Path to word list file",
+        help="Path to full guess vocabulary (e.g. 10k words)",
+    )
+    parser.add_argument(
+        "--answers",
+        default=str(ANSWERS),
+        metavar="FILE",
+        help="Path to curated answer list (e.g. 2k words)",
     )
     parser.add_argument(
         "--hard",
@@ -203,38 +221,18 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     p_target = sub.add_parser("target", help="Solve a specific target word")
-    p_target.add_argument(
-        "--target",
-        required=True,
-        metavar="WORD",
-        help="The secret word to solve",
-    )
+    p_target.add_argument("--target", required=True, metavar="WORD")
 
     p_bench = sub.add_parser(
-        "benchmark", help="Run over the full word list and report statistics"
+        "benchmark", help="Run over the answer list and report statistics"
     )
     p_bench.add_argument(
-        "--no-plot",
-        action="store_true",
-        help="Skip the matplotlib chart",
+        "--no-plot", action="store_true", help="Skip the matplotlib chart"
     )
-    p_bench.add_argument(
-        "--sample",
-        type=int,
-        default=None,
-        metavar="N",
-        help="Evaluate a random sample of N words instead of the full list",
-    )
+    p_bench.add_argument("--sample", type=int, default=None, metavar="N")
 
-    sub.add_parser(
-        "interactive",
-        help="Get guess suggestions; you supply the colour feedback manually",
-    )
-
-    sub.add_parser(
-        "find-opener",
-        help="Compute the true entropy optimal opener",
-    )
+    sub.add_parser("interactive", help="Get guess suggestions interactively")
+    sub.add_parser("find-opener", help="Compute the entropy-optimal opener")
 
     return parser
 
@@ -248,8 +246,13 @@ def main() -> None:
         sys.exit(0)
 
     word_list = load_word_list(args.words)
+    answers = load_answer_list(args.answers)
+
     if not word_list:
-        print("[!] Word list is empty or could not be loaded.")
+        print("[!] Guess vocabulary is empty or could not be loaded.")
+        sys.exit(1)
+    if not answers:
+        print("[!] Answer list is empty or could not be loaded.")
         sys.exit(1)
 
     dispatch = {
@@ -258,7 +261,7 @@ def main() -> None:
         "interactive": cmd_interactive,
         "find-opener": cmd_find_opener,
     }
-    dispatch[args.command](args, word_list)
+    dispatch[args.command](args, word_list, answers)
 
 
 if __name__ == "__main__":

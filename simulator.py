@@ -26,9 +26,9 @@ class GameResult:
 
 
 class WordleGame:
-    def __init__(self, word_list: list[str], target: str) -> None:
-        self.word_list: list[str] = word_list
-        self._word_set: set[str] = set(word_list)
+    def __init__(self, answer_list: list[str], target: str) -> None:
+        self.answer_list: list[str] = answer_list
+        self._answer_set: set[str] = set(answer_list)
         self.target: str = target.upper()
 
     def play(self, solver: WordleSolver, verbose: bool = False) -> GameResult:
@@ -58,13 +58,13 @@ class WordleGame:
 
 
 def run_benchmark(
-    word_list: list[str],
+    answer_list: list[str],
     solver: WordleSolver,
     verbose: bool = False,
     show_progress: bool = True,
     sample: list[str] | None = None,
 ) -> dict:
-    targets = sample if sample is not None else word_list
+    targets = sample if sample is not None else answer_list
     n = len(targets)
     results: list[GameResult] = []
     failed: list[str] = []
@@ -82,7 +82,7 @@ def run_benchmark(
                 flush=True,
             )
 
-        game = WordleGame(word_list, target)
+        game = WordleGame(answer_list, target)
         result = game.play(solver, verbose=verbose)
         results.append(result)
 

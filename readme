@@ -1,4 +1,11 @@
-This is a readme
+# Wordle Bot
 
-More to come later
-
+Log
+- Implemented initial entropy algorithm, mean guesses ~4.5 sampled over 100/200
+- Was running benchmark tests over all possible words, not just wordle answer list
+(which meant the mean guesses is inflated higher, since humans playing Wordle don't need to guess AAHED)
+- Once we switched to a proper available guesses/available answers list and also activated vocab threshold to 20->8, benchmark went to ~3.58 guesses with 98% success rate (from 4.34 guesses with 92% success)
+- also switched starting word from SLATE->TARES->CRANE
+- the main algorithm is shannon entropy, basically on a single turn you try every single word as the next "guess". then for each "guess", you look through all the other possible "answers" and say "if this were the answer, what pattern would it create for this guess?"
+    - then you sort them all in buckets based on the color pattern and calculate the entropy here. the "guess" with the best entropy (lots of small buckets) wins.
+    - so basically were saying, which guess gives the smallest buckets? AKA if i do this guess, does it narrow down my possible answers by a lot?

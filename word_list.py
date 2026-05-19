@@ -1,19 +1,26 @@
-import os
 import string
 from pathlib import Path
 
-WORDS = Path(r"valid-wordle-words.txt")
+WORDS = Path("word-list.txt")  # 10k guesses
+ANSWERS = Path("answer-list.txt")  # 2k answers
 
 
-def load_word_list(filepath):
-    words = []
-    if filepath and Path(filepath).exists():
-        with open(filepath, "r") as f:
-            raw = f.read().strip().split("\n")
-        words = [w.strip().upper() for w in raw]
-    else:
-        if filepath:
-            print(f"[WordList] '{filepath}' not found — using embedded list.")
+def load_word_list(filepath) -> list[str]:
+    return _load_and_validate(filepath, label="guess list")
+
+
+def load_answer_list(filepath) -> list[str]:
+    return _load_and_validate(filepath, label="answer list")
+
+
+def _load_and_validate(filepath, label="word list") -> list[str]:
+    path = Path(filepath)
+    if not path.exists():
+        print(f"[WordList] '{filepath}' not found — {label} will be empty.")
+        return []
+    with open(path, "r") as f:
+        raw = f.read().strip().split("\n")
+    words = [w.strip().upper() for w in raw]
     return _validate(words)
 
 
@@ -34,4 +41,7 @@ def _validate(words: list[str]) -> list[str]:
 
 if __name__ == "__main__":
     words = load_word_list(WORDS)
-    print(f"Sample: {words[:10]}")
+    answers = load_answer_list(ANSWERS)
+    print(f"Guess vocabulary : {len(words)} words")
+    print(f"Answer list      : {len(answers)} words")
+    print(f"Sample answers   : {answers[:10]}")
