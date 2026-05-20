@@ -52,7 +52,7 @@ class WordleSolver:
         if self._turn == 1 or not self._candidates:
             return OPENER
 
-        if len(self._candidates) <= 2:
+        if len(self._candidates) == 1:
             return self._candidates[0]
 
         guess_pool = self._choose_pool()
