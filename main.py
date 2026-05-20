@@ -30,8 +30,9 @@ from pathlib import Path
 
 from word_list import load_word_list, load_answer_list, WORDS, ANSWERS
 from solver import WordleSolver, OPENER, find_best_opener
-from simulator import WordleGame, run_benchmark, MAX_GUESSES
+from simulator import WordleGame, MAX_GUESSES
 from feedback import GuessFeedback, TileColor
+from benchmark import run_benchmark
 
 
 def _print_stats(stats: dict) -> None:
