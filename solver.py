@@ -49,14 +49,11 @@ class WordleSolver:
     def next_guess(self) -> str:
         self._turn += 1
 
-        if self._turn == 1:
+        if self._turn == 1 or not self._candidates:
             return OPENER
 
         if len(self._candidates) <= 2:
             return self._candidates[0]
-
-        if not self._candidates:
-            return OPENER
 
         guess_pool = self._choose_pool()
         return self._best_guess(guess_pool)

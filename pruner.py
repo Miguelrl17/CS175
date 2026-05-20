@@ -1,5 +1,6 @@
 def is_consistent(word, state) -> bool:
     word = word.upper()
+
     for pos, letter in state.green_letters.items():
         if word[pos] != letter:
             return False
@@ -11,15 +12,11 @@ def is_consistent(word, state) -> bool:
             if word[pos] == letter:
                 return False
 
-    for letter in state.gray_letters:
-        green_count = sum(
-            1 for l in state.green_letters.values() if l == letter)
-        yellow_count = len(state.yellow_letters.get(letter, set()))
-        confirmed = green_count + yellow_count
-
-        if confirmed == 0 and letter in word:
+    for letter, min_count in state.letter_min_count.items():
+        if word.count(letter) < min_count:
             return False
-        if confirmed > 0 and word.count(letter) > confirmed:
+    for letter, max_count in state.letter_max_count.items():
+        if word.count(letter) > max_count:
             return False
 
     return True

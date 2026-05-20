@@ -12,44 +12,57 @@ class TileColor(str, Enum):
 
 @dataclass
 class GuessFeedback:
-    guess:  str
+    guess: str
     colors: list[TileColor]
 
     def is_win(self) -> bool:
         return all(c == TileColor.GREEN for c in self.colors)
 
     def __str__(self) -> str:
-        color_map = {TileColor.GREEN: "🟩",
-                     TileColor.YELLOW: "🟨", TileColor.GRAY: "⬜"}
+        color_map = {
+            TileColor.GREEN: "🟩",
+            TileColor.YELLOW: "🟨",
+            TileColor.GRAY: "⬜",
+        }
         tiles = "".join(color_map[c] for c in self.colors)
         return f"{self.guess}  {tiles}"
 
 
 @dataclass
 class GameState:
-    green_letters:  dict[int, str] = field(default_factory=dict)
+    green_letters: dict[int, str] = field(default_factory=dict)
     yellow_letters: dict[str, set[int]] = field(default_factory=dict)
-    gray_letters:   set[str] = field(default_factory=set)
-    history:        list[GuessFeedback] = field(default_factory=list)
+    gray_letters: set[str] = field(default_factory=set)
+    letter_min_count: dict[str, int] = field(default_factory=dict)  # NEW
+    letter_max_count: dict[str, int] = field(default_factory=dict)  # NEW
+    history: list[GuessFeedback] = field(default_factory=list)
 
     def update(self, feedback: GuessFeedback) -> None:
         self.history.append(feedback)
+
         confirmed_counts: dict[str, int] = {}
+        gray_seen: set[str] = set()
 
         for pos, (letter, color) in enumerate(zip(feedback.guess, feedback.colors)):
             if color == TileColor.GREEN:
                 self.green_letters[pos] = letter
                 confirmed_counts[letter] = confirmed_counts.get(letter, 0) + 1
-
             elif color == TileColor.YELLOW:
-                if letter not in self.yellow_letters:
-                    self.yellow_letters[letter] = set()
-                self.yellow_letters[letter].add(pos)
+                self.yellow_letters.setdefault(letter, set()).add(pos)
                 confirmed_counts[letter] = confirmed_counts.get(letter, 0) + 1
-
             elif color == TileColor.GRAY:
-                if letter not in confirmed_counts:
-                    self.gray_letters.add(letter)
+                gray_seen.add(letter)
+
+        for letter, count in confirmed_counts.items():
+            if count > self.letter_min_count.get(letter, 0):
+                self.letter_min_count[letter] = count
+
+        for letter in gray_seen:
+            exact = confirmed_counts.get(letter, 0)
+            prev = self.letter_max_count.get(letter, 10**9)
+            self.letter_max_count[letter] = min(prev, exact)
+            if exact == 0:
+                self.gray_letters.add(letter)  # keep for __str__/display
 
     def guess_count(self) -> int:
         return len(self.history)
@@ -90,4 +103,4 @@ def compute_feedback(guess: str, target: str) -> GuessFeedback:
         else:
             colors[i] = TileColor.GRAY
 
-    return GuessFeedback(guess=guess, colors=colors)   # type: ignore[arg-type]
+    return GuessFeedback(guess=guess, colors=colors)  # type: ignore[arg-type]
